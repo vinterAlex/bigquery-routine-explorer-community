@@ -19,7 +19,8 @@ Explore the dependency graph of your BigQuery routines (stored procedures, funct
 | No data access, read-only by design | ✓ | ✓ |
 | Price | **Free** | **One-time purchase** |
 
-> **Upgrade:** [Get the Full Edition on Lemon Squeezy →](https://lemonsqueezy.com/products/bigquery-routine-explorer)
+> **Upgrade:** [Get the Full Edition on Lemon Squeezy →](https://every-day-utilities.lemonsqueezy.com/checkout/buy/372279e8-1a3b-4861-ab72-36c9547bc511)
+
 
 ---
 
