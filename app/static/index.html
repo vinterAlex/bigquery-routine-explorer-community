@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BigQuery Routine Explorer — Community</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; height: 100vh; display: flex; flex-direction: column; background: #0f172a; color: #e2e8f0; }
+#header { background: #1e293b; padding: 8px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #334155; flex-shrink: 0; }
+#header h1 { font-size: 16px; font-weight: 600; color: #f1f5f9; }
+#header button { background: #3b82f6; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+#header button:hover { background: #2563eb; }
+#header button:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+#header .status { font-size: 12px; color: #94a3b8; margin-left: auto; }
+#edition-badge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 2px 8px; border-radius: 4px; background: #7c3aed33; color: #a78bfa; margin-left: 8px; vertical-align: middle; }
+#upgrade-banner { background: linear-gradient(90deg, #1e3a5f, #1e293b); border-bottom: 1px solid #334155; padding: 6px 16px; display: flex; align-items: center; gap: 10px; font-size: 12px; color: #cbd5e1; flex-shrink: 0; }
+#upgrade-banner a { color: #60a5fa; font-weight: 600; text-decoration: none; }
+#upgrade-banner a:hover { text-decoration: underline; }
+#upgrade-banner .dismiss { cursor: pointer; color: #64748b; font-size: 14px; margin-left: auto; padding: 0 4px; }
+#upgrade-banner .dismiss:hover { color: #e2e8f0; }
+.community-limit-warn { color: #fbbf24; font-size: 11px; margin-left: 6px; }
+#main { display: flex; flex: 1; overflow: hidden; }
+#left-panel { width: 260px; background: #1e293b; border-right: 1px solid #334155; display: flex; flex-direction: column; flex-shrink: 0; }
+#left-panel .panel-header { padding: 10px 12px; font-size: 13px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #334155; }
+#tree-search { margin: 8px 10px; padding: 6px 8px; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 5px; font-size: 12px; flex-shrink: 0; }
+#tree-search:focus { outline: none; border-color: #3b82f6; }
+#tree { flex: 1; overflow-y: auto; padding: 4px 0; }
+.tree-dataset { padding: 6px 12px; cursor: pointer; font-size: 13px; color: #cbd5e1; display: flex; align-items: center; gap: 6px; }
+.tree-dataset:hover { background: #334155; }
+.tree-dataset .arrow { font-size: 10px; transition: transform 0.15s; }
+.tree-dataset.open .arrow { transform: rotate(90deg); }
+.tree-routines { display: none; }
+.tree-routines.open { display: block; }
+.tree-count { color: #475569; font-size: 10px; margin-left: 4px; }
+.tree-item { padding: 4px 12px 4px 30px; cursor: pointer; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tree-item:hover { background: #334155; color: #e2e8f0; }
+.tree-item.selected { background: #1e40af; color: #f1f5f9; }
+.tree-routine { color: #94a3b8; }
+.tree-table { color: #7dd3fc; }
+.tree-item .type-badge { font-size: 9px; padding: 1px 4px; border-radius: 3px; margin-left: 4px; }
+.tree-section { padding: 6px 12px 2px; font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; }
+.badge-procedure { background: #7c3aed33; color: #a78bfa; }
+.badge-function { background: #05966933; color: #6ee7b7; }
+.badge-tvf { background: #d9770633; color: #fbbf24; }
+#center-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+#depth-controls { padding: 8px 12px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 12px; font-size: 13px; flex-shrink: 0; }
+#depth-controls label { color: #94a3b8; flex-shrink: 0; }
+#depth-controls input { width: 50px; background: #0f172a; border: 1px solid #475569; color: #e2e8f0; padding: 4px 6px; border-radius: 4px; text-align: center; font-size: 13px; flex-shrink: 0; }
+#depth-controls input:focus { outline: none; border-color: #3b82f6; }
+#depth-controls button { background: #3b82f6; color: white; border: none; padding: 4px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+#depth-controls button:hover { background: #2563eb; }
+#graph-container { flex: 1; min-height: 0; min-width: 0; overflow: hidden; background: #0f172a; }
+#right-panel { width: 380px; background: #1e293b; border-left: 1px solid #334155; display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; }
+#right-panel .panel-header { padding: 10px 12px; font-size: 13px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #334155; }
+#routine-detail { padding: 12px; flex: 1; }
+.detail-section { margin-bottom: 14px; }
+.detail-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.detail-value { font-size: 13px; color: #e2e8f0; }
+.detail-fqn { font-size: 14px; font-weight: 600; color: #f1f5f9; word-break: break-all; }
+.detail-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.detail-tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+.tag-call { background: #7c3aed33; color: #a78bfa; }
+.tag-create { background: #05966933; color: #6ee7b7; }
+.tag-insert { background: #2563eb33; color: #93c5fd; }
+.tag-merge { background: #d9770633; color: #fbbf24; }
+.tag-delete { background: #dc262633; color: #fca5a5; }
+.tag-read { background: #64748b33; color: #cbd5e1; }
+.tag-dynamic { background: #dc262633; color: #fca5a5; }
+.sql-block { background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 12px; font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace; font-size: 12px; line-height: 1.6; color: #e2e8f0; white-space: pre-wrap; word-break: break-word; overflow-x: auto; max-height: 400px; overflow-y: auto; }
+.op-list { font-size: 12px; }
+.op-item { padding: 3px 0; display: flex; align-items: center; gap: 6px; }
+.op-seq { color: #64748b; font-size: 11px; min-width: 20px; }
+.op-type { font-size: 11px; padding: 1px 6px; border-radius: 3px; }
+.op-target { color: #94a3b8; }
+.empty-state { display: flex; align-items: center; justify-content: center; height: 100%; color: #475569; font-size: 14px; }
+#loading-overlay { position: absolute; inset:0; background: #0f172aee; display: flex; align-items: center; justify-content: center; z-index: 10; }
+/* The `display: flex` above (an ID selector) outranks the browser's built-in
+   `[hidden] { display: none }` rule, so without this the `hidden` attribute
+   toggled from JS would be silently ignored and the overlay never disappear. */
+#loading-overlay[hidden] { display: none; }
+.spinner { width: 32px; height: 32px; border: 3px solid #334155; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="header">
+  <h1>BigQuery Routine Explorer <span id="edition-badge">COMMUNITY</span></h1>
+  <button id="refresh-btn" onclick="refreshGraph()">Refresh from BigQuery</button>
+  <span class="status" id="status">Not loaded</span>
+</div>
+<div id="upgrade-banner">
+  <span>Community Edition: max 50 routines, 1 project, depth 3</span>
+  <a id="upgrade-link" href="#" target="_blank">Upgrade to Full Edition</a>
+  <span class="dismiss" onclick="document.getElementById('upgrade-banner').style.display='none'">&times;</span>
+</div>
+<div id="main">
+  <div id="left-panel">
+    <div class="panel-header">Datasets, Routines &amp; Tables</div>
+    <input type="text" id="tree-search" placeholder="Filter by name..." oninput="filterTree(this.value)">
+    <div id="tree"><div class="empty-state">Click Refresh to load</div></div>
+  </div>
+  <div id="center-panel">
+    <div id="depth-controls">
+      <label>Forward depth</label>
+      <input type="number" id="fwd-depth" value="2" min="0" max="3" onchange="updateGraph()">
+      <label>Backward depth</label>
+      <input type="number" id="bwd-depth" value="2" min="0" max="3" onchange="updateGraph()">
+      <button id="apply-depth" onclick="updateGraph()">Apply depth</button>
+    </div>
+    <div id="graph-container"></div>
+    <div id="loading-overlay" hidden>
+      <div style="text-align:center;">
+        <div class="spinner"></div>
+        <div id="loading-text" style="margin-top:12px; font-size:12px; color:#94a3b8;">Scanning BigQuery...</div>
+      </div>
+    </div>
+  </div>
+  <div id="right-panel">
+    <div class="panel-header">Routine Detail</div>
+    <div id="routine-detail"><div class="empty-state">Select a routine</div></div>
+  </div>
+</div>
+
+<script src="/static/vendor/vis-data.min.js"></script>
+<script src="/static/vendor/vis-network.min.js"></script>
+<script>
+let graphData = null;
+let selectedNode = null;
+let network = null;
+
+const EDGE_COLORS = {
+  call: '#a78bfa',
+  create: '#6ee7b7',
+  insert: '#93c5fd',
+  merge: '#fbbf24',
+  delete: '#fca5a5',
+  read: '#94a3b8',
+};
+
+async function refreshGraph() {
+  try {
+    await fetch('/api/refresh', { method: 'POST' });
+  } catch (e) {
+    document.getElementById('status').textContent = 'Error: ' + e.message;
+    return;
+  }
+  await watchRefresh();
+}
+
+// Polls /api/refresh_status while a scan (manual or REFRESH_ON_START) is
+// running, keeping the loading overlay up with a live elapsed-time readout
+// instead of the page just looking stuck. Resolves once the scan finishes
+// (successfully or not).
+async function watchRefresh() {
+  const btn = document.getElementById('refresh-btn');
+  const overlay = document.getElementById('loading-overlay');
+  const loadingText = document.getElementById('loading-text');
+  btn.disabled = true;
+  overlay.hidden = false;
+  document.getElementById('status').textContent = 'Refreshing...';
+
+  try {
+    while (true) {
+      let state;
+      try {
+        state = await (await fetch('/api/refresh_status')).json();
+      } catch (e) {
+        loadingText.textContent = 'Scanning BigQuery... (status check failed, still waiting - ' + e.message + ')';
+        await new Promise(r => setTimeout(r, 2000));
+        continue;
+      }
+
+      if (state.status === 'running') {
+        const secs = state.elapsed_seconds != null ? Math.round(state.elapsed_seconds) : 0;
+        loadingText.textContent = `Scanning BigQuery... ${secs}s elapsed. This can take a while depending on how many datasets and routines there are.`;
+        await new Promise(r => setTimeout(r, 1500));
+        continue;
+      }
+
+      if (state.status === 'error') {
+        document.getElementById('status').textContent = 'Error: ' + state.error;
+        return;
+      }
+
+      if (state.status === 'done' && state.result) {
+        const r = state.result;
+        document.getElementById('status').textContent = `${r.routine_count} routines, ${r.node_count} nodes, ${r.edge_count} edges`;
+        loadingText.textContent = 'Building graph...';
+        await loadGraph();
+        return;
+      }
+
+      // status === 'idle': nothing has ever run - nothing to wait for.
+      return;
+    }
+  } finally {
+    btn.disabled = false;
+    overlay.hidden = true;
+  }
+}
+
+async function loadGraph() {
+  try {
+    const res = await fetch('/api/graph');
+    const data = await res.json();
+    if (data.error) {
+      document.getElementById('status').textContent = data.error;
+      return;
+    }
+    graphData = data;
+    const routineCount = (data.nodes || []).filter(n => n.type === 'routine').length;
+    const communityWarn = routineCount >= 50 ? ' <span class="community-limit-warn">⚠ Community limit reached (50)</span>' : '';
+    const statusEl = document.getElementById('status');
+    statusEl.innerHTML = `${routineCount} routines, ${(data.nodes || []).length} nodes, ${(data.edges || []).length} edges` + communityWarn;
+    buildTree();
+    filterTree(document.getElementById('tree-search').value);
+    // Deliberately not auto-rendering the full, unfiltered graph here: for a
+    // real project this can be hundreds/thousands of nodes, and computing a
+    // hierarchical layout for all of it at once can take a very long time (it
+    // looks like the page hung, when it's actually just still laying out).
+    // Render only once something is selected, same as clicking a tree item.
+    // If a refresh happened while a node was already selected, just re-filter
+    // that same view instead of losing the selection.
+    if (selectedNode) {
+      await updateGraph();
+    } else {
+      showGraphPrompt();
+    }
+  } catch (e) {
+    document.getElementById('status').textContent = 'Error loading graph: ' + e.message;
+  }
+}
+
+function buildTree() {
+  const tree = document.getElementById('tree');
+  tree.innerHTML = '';
+  const datasets = {};
+  for (const node of graphData.nodes) {
+    const key = (node.project || '') + '.' + (node.dataset || '');
+    if (!datasets[key]) datasets[key] = [];
+    datasets[key].push(node);
+  }
+
+  for (const [ds, nodes] of Object.entries(datasets).sort()) {
+    const routines = nodes.filter(n => n.type === 'routine');
+    const tables = nodes.filter(n => n.type === 'table');
+
+    const dsEl = document.createElement('div');
+    dsEl.className = 'tree-dataset';
+    dsEl.innerHTML = `<span class="arrow">&#9654;</span> ${ds} <span class="tree-count">${routines.length}r / ${tables.length}t</span>`;
+    const bodyEl = document.createElement('div');
+    bodyEl.className = 'tree-routines';
+    dsEl.onclick = () => {
+      dsEl.classList.toggle('open');
+      bodyEl.classList.toggle('open');
+    };
+
+    for (const r of routines.sort((a, b) => a.label.localeCompare(b.label))) {
+      bodyEl.appendChild(makeTreeItem(r));
+    }
+
+    if (tables.length > 0) {
+      const sep = document.createElement('div');
+      sep.className = 'tree-section';
+      sep.textContent = 'Tables';
+      bodyEl.appendChild(sep);
+      for (const t of tables.sort((a, b) => a.label.localeCompare(b.label))) {
+        bodyEl.appendChild(makeTreeItem(t, true));
+      }
+    }
+
+    tree.appendChild(dsEl);
+    tree.appendChild(bodyEl);
+  }
+}
+
+function makeTreeItem(node, isTable) {
+  const el = document.createElement('div');
+  el.className = isTable ? 'tree-item tree-table' : 'tree-item tree-routine';
+  el.dataset.fqn = node.id;
+  if (isTable) {
+    el.textContent = node.label;
+  } else {
+    let badgeClass = 'badge-procedure';
+    if (node.routine_type === 'FUNCTION') badgeClass = 'badge-function';
+    if (node.routine_type === 'TABLE_VALUED_FUNCTION') badgeClass = 'badge-tvf';
+    const badge = `<span class="type-badge ${badgeClass}">${node.routine_type || '?'}</span>`;
+    el.innerHTML = `${node.label} ${badge}`;
+  }
+  el.onclick = () => selectNode(node.id);
+  return el;
+}
+
+function filterTree(query) {
+  const q = query.trim().toLowerCase();
+  const groups = document.querySelectorAll('#tree .tree-dataset');
+  groups.forEach(dsEl => {
+    const bodyEl = dsEl.nextElementSibling;
+    if (!bodyEl || !bodyEl.classList.contains('tree-routines')) return;
+
+    let groupHasMatch = false;
+    let sectionEl = null;
+    let sectionHasMatch = false;
+    const finalizeSection = () => {
+      if (sectionEl) sectionEl.style.display = sectionHasMatch ? '' : 'none';
+    };
+
+    for (const child of bodyEl.children) {
+      if (child.classList.contains('tree-section')) {
+        finalizeSection();
+        sectionEl = child;
+        sectionHasMatch = false;
+        continue;
+      }
+      if (child.classList.contains('tree-item')) {
+        const match = !q || child.textContent.toLowerCase().includes(q);
+        child.style.display = match ? '' : 'none';
+        if (match) { groupHasMatch = true; sectionHasMatch = true; }
+      }
+    }
+    finalizeSection();
+
+    dsEl.style.display = (!q || groupHasMatch) ? '' : 'none';
+    const shouldOpen = !!q && groupHasMatch;
+    dsEl.classList.toggle('open', shouldOpen);
+    bodyEl.classList.toggle('open', shouldOpen);
+  });
+}
+
+async function updateGraph() {
+  if (!graphData || !selectedNode) return;
+  const fwd = parseInt(document.getElementById('fwd-depth').value) || 0;
+  const bwd = parseInt(document.getElementById('bwd-depth').value) || 0;
+  try {
+    const res = await fetch(`/api/graph?selected=${encodeURIComponent(selectedNode)}&forward=${fwd}&backward=${bwd}`);
+    const data = await res.json();
+    if (data.error) return;
+    renderGraph(data);
+  } catch (e) {}
+}
+
+function renderGraph(data) {
+  data = data || graphData;
+  if (!data) return;
+
+  // Flat, dbt-style node styling: same shape for every node, a single accent
+  // colour tells routine vs. table, and the selection highlight is the only
+  // thing that changes brightness. No per-node randomness, so the same set
+  // of nodes always looks the same.
+  const nodes = new vis.DataSet(data.nodes.map(n => {
+    const isSelected = n.id === selectedNode;
+    const isTable = n.type === 'table';
+    return {
+      id: n.id,
+      label: n.label,
+      title: n.id + (isTable ? ' (table)' : ' (' + (n.routine_type || 'routine') + ')')
+        + '\nClick: view code  ·  Double-click: open',
+      shape: 'box',
+      shapeProperties: { borderRadius: 4 },
+      margin: { top: 8, right: 12, bottom: 8, left: 12 },
+      widthConstraint: { minimum: 90, maximum: 220 },
+      color: isSelected
+        ? { background: '#3b82f6', border: '#93c5fd', highlight: { background: '#3b82f6', border: '#93c5fd' } }
+        : isTable
+          ? { background: '#0f2e24', border: '#059669', highlight: { background: '#134534', border: '#10b981' } }
+          : { background: '#1e293b', border: '#475569', highlight: { background: '#26344a', border: '#64748b' } },
+      font: { color: '#e2e8f0', size: 12, face: 'inherit' },
+      borderWidth: isSelected ? 2 : 1,
+      chosen: false,
+    };
+  }));
+
+  const edges = new vis.DataSet(data.edges.map(e => ({
+    id: e.from_ + '->' + e.to + ':' + e.operation + ':' + e.sequence,
+    from: e.from_,
+    to: e.to,
+    label: e.operation,
+    title: `#${e.sequence} ${e.operation}`,
+    color: { color: EDGE_COLORS[e.operation] || '#475569', highlight: '#e2e8f0', inherit: false },
+    font: { color: '#64748b', size: 9, strokeWidth: 0, align: 'top' },
+    arrows: { to: { enabled: true, scaleFactor: 0.6 } },
+    smooth: { type: 'cubicBezier', forceDirection: 'horizontal', roundness: 0.55 },
+  })));
+
+  const container = document.getElementById('graph-container');
+  if (network) network.destroy();
+  container.innerHTML = ''; // clear the "select something" prompt, if shown
+
+  const interaction = { hover: true, tooltipDelay: 150, dragNodes: true, dragView: true, zoomView: true };
+
+  // PASS 1 - layout only. Run vis-network's deterministic layered layout
+  // (dbt-lineage style, left-to-right) purely to compute where each node
+  // should go. Positions come from graph structure, not a physics simulation,
+  // so the same set of nodes always produces the same shape.
+  //
+  // Spacing note: nodeSpacing / levelSeparation are centre-to-centre and
+  // ignore the node's own size, so they must exceed the node dimensions
+  // (boxes are up to 220px wide and ~55px tall with a wrapped label) or
+  // neighbours overlap.
+  const layoutPass = new vis.Network(container, { nodes, edges }, {
+    physics: false,
+    layout: {
+      hierarchical: {
+        enabled: true,
+        direction: 'LR',
+        sortMethod: 'directed',
+        levelSeparation: 300,
+        nodeSpacing: 100,
+        treeSpacing: 160,
+        blockShifting: true,
+        edgeMinimization: true,
+        parentCentralization: true,
+      },
+    },
+    interaction,
+  });
+  const positions = layoutPass.getPositions();
+  layoutPass.destroy();
+
+  // PASS 2 - the network the user actually sees. Every node is pinned at the
+  // coordinates computed above and NO layout algorithm is active. That is what
+  // makes dragging behave like dbt: with nothing managing positions, moving a
+  // node moves only that node - nothing else can shift in response.
+  //
+  // (Toggling hierarchical off on a live network via setOptions, the previous
+  // approach, does not do this: vis re-initialises its layout engine and
+  // scrambles the positions it had just computed, which is what caused nodes
+  // to stack on top of each other and drag as a group.)
+  nodes.update(
+    nodes.getIds()
+      .filter(id => positions[id])
+      .map(id => ({ id, x: positions[id].x, y: positions[id].y }))
+  );
+
+  network = new vis.Network(container, { nodes, edges }, {
+    physics: false,
+    layout: { hierarchical: { enabled: false }, improvedLayout: false },
+    interaction,
+  });
+  network.once('afterDrawing', () => network.fit({ animation: false }));
+  // Single click: peek at a node's code/detail in the right panel WITHOUT
+  // changing the active node or re-rendering the graph, so you can inspect
+  // the neighbours of the active node in place. Double click: navigate into
+  // it (make it the active node and re-centre the graph on it).
+  network.on('click', params => {
+    if (params.nodes.length > 0) {
+      loadRoutineDetail(params.nodes[0]);
+    }
+  });
+  network.on('doubleClick', params => {
+    if (params.nodes.length > 0) {
+      selectNode(params.nodes[0]);
+    }
+  });
+}
+
+function showGraphPrompt() {
+  if (network) { network.destroy(); network = null; }
+  const container = document.getElementById('graph-container');
+  container.innerHTML = '<div class="empty-state">Select a routine or table on the left to see its dependency graph.</div>';
+}
+
+async function selectNode(fqn) {
+  selectedNode = fqn;
+  document.querySelectorAll('.tree-item').forEach(el => {
+    el.classList.toggle('selected', el.dataset.fqn === fqn);
+  });
+  updateGraph();
+  loadRoutineDetail(fqn);
+}
+
+async function loadRoutineDetail(fqn) {
+  const detail = document.getElementById('routine-detail');
+  detail.innerHTML = '<div class="empty-state">Loading...</div>';
+
+  const node = graphData && graphData.nodes.find(n => n.id === fqn);
+  if (node && node.type === 'table') {
+    const refs = (graphData.edges || []).filter(e => e.to === fqn);
+    let refsHtml;
+    if (refs.length > 0) {
+      refsHtml = refs.map(e => `
+        <div class="op-item">
+          <span class="op-type detail-tag tag-${e.operation}">${e.operation}</span>
+          <span class="op-target" style="cursor:pointer;" onclick="selectNode('${e.from_}')">${e.from_}</span>
+        </div>`).join('');
+    } else {
+      refsHtml = '<span style="color:#475569">Not referenced by any routine</span>';
+    }
+    detail.innerHTML = `
+      <div class="detail-section"><div class="detail-fqn">${escapeHtml(node.project + '.' + node.dataset + '.' + node.label)}</div></div>
+      <div class="detail-section"><div class="detail-label">Type</div><div class="detail-value">Table</div></div>
+      <div class="detail-section"><div class="detail-label">Read / written by (${refs.length})</div><div class="op-list">${refsHtml}</div></div>
+    `;
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/routine/${encodeURIComponent(fqn)}`);
+    const r = await res.json();
+    if (r.error) { detail.innerHTML = `<div class="empty-state">${r.error}</div>`; return; }
+
+    let opsHtml = '';
+    if (r.detected_operations && r.detected_operations.length > 0) {
+      opsHtml = r.detected_operations.map(op => {
+        const tc = 'tag-' + op.type;
+        return `<div class="op-item"><span class="op-seq">#${op.sequence}</span><span class="op-type detail-tag ${tc}">${op.type}</span><span class="op-target">${op.target}</span></div>`;
+      }).join('');
+    }
+
+    let tagsHtml = (r.operation_types || []).map(t => `<span class="detail-tag tag-${t}">${t}</span>`).join('');
+    if (r.has_dynamic_sql) tagsHtml += '<span class="detail-tag tag-dynamic">EXECUTE IMMEDIATE</span>';
+
+    detail.innerHTML = `
+      <div class="detail-section"><div class="detail-fqn">${r.fqn}</div></div>
+      <div class="detail-section"><div class="detail-label">Type</div><div class="detail-value">${r.routine_type || '?'} ${r.language ? '(' + r.language + ')' : ''}</div></div>
+      <div class="detail-section"><div class="detail-label">Tags</div><div class="detail-tags">${tagsHtml || '<span style="color:#475569">None</span>'}</div></div>
+      <div class="detail-section"><div class="detail-label">Detected Operations</div><div class="op-list">${opsHtml || '<span style="color:#475569">None detected</span>'}</div></div>
+      <div class="detail-section"><div class="detail-label">Definition</div><div class="sql-block">${escapeHtml(r.definition || '-- No definition available --')}</div></div>
+    `;
+  } catch (e) {
+    detail.innerHTML = `<div class="empty-state">Error: ${e.message}</div>`;
+  }
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+(async () => {
+  // Load edition info and set upgrade link
+  try {
+    const ed = await (await fetch('/api/edition')).json();
+    const link = document.getElementById('upgrade-link');
+    if (link && ed.purchase_url) link.href = ed.purchase_url;
+  } catch (e) { /* ignore */ }
+
+  for (const id of ['fwd-depth', 'bwd-depth']) {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') updateGraph();
+    });
+  }
+
+  // If REFRESH_ON_START kicked off a scan before this page even loaded, pick
+  // up on it and show the same loading state as a manual refresh, instead of
+  // just showing an empty "no graph yet" message while it's still running.
+  try {
+    const state = await (await fetch('/api/refresh_status')).json();
+    if (state.status === 'running') {
+      await watchRefresh();
+      return;
+    }
+  } catch (e) {
+    // fall through to a normal load attempt below
+  }
+  await loadGraph();
+})();
+</script>
+</body>
+</html>
