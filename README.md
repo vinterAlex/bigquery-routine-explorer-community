@@ -113,3 +113,14 @@ Loads an embedded demo project with 14 routines and 18 tables exercising all dep
 
 - Dynamic SQL via `EXECUTE IMMEDIATE` cannot be statically parsed — such routines are flagged in the UI rather than silently missing edges.
 - Only reads routine metadata/definition text; it never reads table data or executes a routine.
+
+## Screenshots
+
+<img width="2540" height="1029" alt="routines explorer_2" src="https://github.com/user-attachments/assets/9e855d08-305a-4857-b37f-b6e2078f7a58" />
+
+<img width="2545" height="1117" alt="routines explorer_1" src="https://github.com/user-attachments/assets/62e4091f-954e-4d00-aeb1-9c04bbf6cff9" />
+
+
+
+
+
