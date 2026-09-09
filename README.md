@@ -59,7 +59,7 @@ docker run \
   routine-explorer-community
 ```
 
-Or simply **double-click `run_app.bat`** (Windows) — it builds on first run and opens the browser automatically.
+🚀🚀 Or simply **double-click `run_app.bat`** (Windows) while Docker is up and secrets folder and file are in place — it builds on first run and opens the browser automatically and don't need the whole CLI thing
 
 Open **http://localhost:8080**, then click **"Refresh from BigQuery"** in the top bar.
 
